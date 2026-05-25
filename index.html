@@ -77,6 +77,7 @@
             transition: 0.3s;
         }
         .sidebar-footer:hover { opacity: 1; }
+        .sidebar-footer a { text-decoration: none; color: inherit; display: flex; flex-direction: column; align-items: center; gap: 8px; }
         .sidebar-footer span { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 1px; color: #666; }
         .footer-logo { width: 50px; height: auto; filter: brightness(1.2); }
     </style>
@@ -150,8 +151,10 @@
         <button onclick="exportSVG()" style="margin-top: 10px; background: #4285f4; font-weight: bold;">Download SVG</button>
 
         <div class="sidebar-footer">
-            <span>powered by eWOW</span>
-            <img src="wow-logo.png" alt="wow!!" class="footer-logo">
+            <a href="https://estudiowow.com" target="_blank">
+                <span>powered by eWOW</span>
+                <img src="wow-logo.png" alt="wow!!" class="footer-logo">
+            </a>
         </div>
     </aside>
 
