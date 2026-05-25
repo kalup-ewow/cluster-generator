@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>eWOW - Grid Generator Pro</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #000; color: white;
+            font-family: 'Inter', system-ui, sans-serif;
+            display: flex; height: 100vh; overflow: hidden;
+        }
+
+        /* Sidebar */
+        #sidebar {
+            width: 320px; background: #0f0f0f; padding: 25px;
+            border-right: 1px solid #222; display: flex; flex-direction: column; gap: 15px;
+            z-index: 100; overflow-y: auto;
+        }
+        h2 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: #444; margin-top: 10px; }
+        .control-group { display: flex; flex-direction: column; gap: 6px; }
+        label { font-size: 0.75rem; color: #888; display: flex; justify-content: space-between; }
+        label span { color: #fff; background: #222; padding: 1px 5px; border-radius: 3px; font-family: monospace; }
+        
+        select, button {
+            background: #1a1a1a; color: #fff; border: 1px solid #333; 
+            padding: 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; outline: none;
+        }
+        button:hover { background: #252525; }
+
+        input[type="range"] {
+            appearance: none; width: 100%; height: 4px; background: #222; outline: none; border-radius: 2px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none; width: 16px; height: 16px; background: #4285f4; border-radius: 50%; cursor: pointer;
+        }
+
+        /* Viewport */
+        #viewport { 
+            flex-grow: 1; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; background: #050505; gap: 20px; 
+            padding: 40px;
+        }
+
+        #timeline-container { height: 4px; background: #111; border-radius: 2px; overflow: hidden; transition: width 0.5s ease; }
+        #timeline-bar { width: 0%; height: 100%; background: #4285f4; box-shadow: 0 0 10px #4285f4; }
+
+        /* Artboard */
+        #canvas-frame {
+            position: relative; overflow: hidden;
+            background: #000; border: 1px solid #1a1a1a;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .box {
+            position: absolute;
+            will-change: top, height, left, width;
+            transition: 
+                top 1s var(--rubber-curve),
+                height 1s var(--rubber-curve),
+                left 0.8s ease-in-out,
+                width 0.8s ease-in-out,
+                background-color 0.6s ease,
+                border-radius 0.4s ease,
+                opacity 0.4s ease;
+        }
+
+        /* Footer Style */
+        .sidebar-footer {
+            margin-top: auto;
+            padding-top: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            opacity: 0.5;
+            transition: 0.3s;
+        }
+        .sidebar-footer:hover { opacity: 1; }
+        .sidebar-footer span { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 1px; color: #666; }
+        .footer-logo { width: 50px; height: auto; filter: brightness(1.2); }
+    </style>
+</head>
+<body>
+
+    <aside id="sidebar">
+        <h2>Artboard (Format)</h2>
+        <div class="control-group">
+            <label>Presets</label>
+            <select id="artboard-preset" onchange="applyPreset(this.value)">
+                <option value="custom">Custom</option>
+                <option value="1:1" selected>Square (1:1)</option>
+                <option value="16:9">Widescreen (16:9)</option>
+                <option value="9:16">Portrait (9:16)</option>
+                <option value="4:5">Social (4:5)</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Width <span><span id="v-canvasW">600</span>px</span></label>
+            <input type="range" id="canvasW" min="200" max="1200" value="600">
+        </div>
+        <div class="control-group">
+            <label>Height <span><span id="v-canvasH">600</span>px</span></label>
+            <input type="range" id="canvasH" min="200" max="1000" value="600">
+        </div>
+
+        <h2>Geometry</h2>
+        <div class="control-group">
+            <label>Quantity <span><span id="v-qty">20</span></span></label>
+            <input type="range" id="qty" min="1" max="50" value="20">
+        </div>
+        <div class="control-group">
+            <label>Columns <span><span id="v-cols">5</span></span></label>
+            <input type="range" id="cols" min="1" max="12" value="5">
+        </div>
+        <div class="control-group">
+            <label>Gap <span><span id="v-gap">10</span>px</span></label>
+            <input type="range" id="gap" min="0" max="40" value="10">
+        </div>
+
+        <h2>Rubber Dynamics</h2>
+        <div class="control-group">
+            <label>Elasticity <span><span id="v-elastic">90</span>%</span></label>
+            <input type="range" id="elastic" min="10" max="150" value="90">
+        </div>
+        <div class="control-group">
+            <label>Evolution Freq. <span><span id="v-impact">4</span></span></label>
+            <input type="range" id="impact" min="1" max="10" value="4">
+        </div>
+
+        <h2>Colors</h2>
+        <div class="control-group">
+            <label>Harmony</label>
+            <select id="color-mode">
+                <option value="triad">Triad</option>
+                <option value="comp">Complementary</option>
+                <option value="analog">Analog</option>
+                <option value="mono">Monochromatic</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Hue <span><span id="v-hue">260</span>°</span></label>
+            <input type="range" id="hue" min="0" max="360" value="260">
+        </div>
+        <div class="control-group">
+            <label>Radius <span><span id="v-radius">30</span>px</span></label>
+            <input type="range" id="radius" min="0" max="100" value="30">
+        </div>
+
+        <button onclick="exportSVG()" style="margin-top: 10px; background: #4285f4; font-weight: bold;">Download SVG</button>
+
+        <div class="sidebar-footer">
+            <span>powered by eWOW</span>
+            <img src="wow-logo.png" alt="wow!!" class="footer-logo">
+        </div>
+    </aside>
+
+    <main id="viewport">
+        <div id="timeline-container"><div id="timeline-bar"></div></div>
+        <div id="canvas-frame"></div>
+    </main>
+
+    <script>
+        const canvas = document.getElementById('canvas-frame');
+        const timelineWrap = document.getElementById('timeline-container');
+        const timelineBar = document.getElementById('timeline-bar');
+        const inputs = ['qty', 'cols', 'gap', 'elastic', 'impact', 'hue', 'radius', 'canvasW', 'canvasH'];
+        
+        let columnStacks = []; 
+        let boxesPool = []; 
+        let startTime = Date.now();
+
+        function applyPreset(val) {
+            const w = document.getElementById('canvasW');
+            const h = document.getElementById('canvasH');
+            if (val === '1:1') { w.value = 600; h.value = 600; }
+            else if (val === '16:9') { w.value = 960; h.value = 540; }
+            else if (val === '9:16') { w.value = 450; h.value = 800; }
+            else if (val === '4:5') { w.value = 480; h.value = 600; }
+        }
+
+        function init() {
+            canvas.innerHTML = '';
+            boxesPool = [];
+            for (let i = 0; i < 60; i++) {
+                const div = document.createElement('div');
+                div.className = 'box';
+                canvas.appendChild(div);
+                const variation = 0.4 + Math.random() * 2.2;
+                boxesPool.push({
+                    el: div,
+                    id: i,
+                    baseW: variation,
+                    evolveW: variation * (1.8 + Math.random()),
+                    weight: variation,
+                    trigger: 0.15 + Math.random() * 0.65,
+                    slot: Math.floor(Math.random() * 10),
+                    active: false
+                });
+            }
+            animate();
+        }
+
+        function syncStacks(targetQty, targetCols) {
+            while (columnStacks.length < targetCols) columnStacks.push([]);
+            if (columnStacks.length > targetCols) {
+                const removed = columnStacks.splice(targetCols);
+                removed.forEach(col => col.forEach(b => {
+                    const shortest = columnStacks.reduce((p, c) => p.length <= c.length ? p : c);
+                    shortest.push(b);
+                }));
+            }
+            let currentTotal = columnStacks.reduce((acc, col) => acc + col.length, 0);
+            while (currentTotal < targetQty) {
+                const targetCol = columnStacks.reduce((p, c) => p.length <= c.length ? p : c);
+                const nextBox = boxesPool.find(b => !b.active);
+                if (nextBox) {
+                    nextBox.active = true;
+                    nextBox.spawnSide = Math.random() > 0.5 ? 'top' : 'bottom';
+                    if (nextBox.spawnSide === 'top') targetCol.unshift(nextBox);
+                    else targetCol.push(nextBox);
+                }
+                currentTotal++;
+            }
+            while (currentTotal > targetQty) {
+                const targetCol = columnStacks.reduce((p, c) => p.length >= c.length ? p : c);
+                const sideToExit = Math.random() > 0.5 ? 'top' : 'bottom';
+                const removed = sideToExit === 'top' ? targetCol.shift() : targetCol.pop();
+                if (removed) {
+                    removed.active = false;
+                    removed.exitSide = sideToExit;
+                }
+                currentTotal--;
+            }
+        }
+
+        function animate() {
+            const canvasW = parseInt(document.getElementById('canvasW').value);
+            const canvasH = parseInt(document.getElementById('canvasH').value);
+            const qty = parseInt(document.getElementById('qty').value);
+            const cols = parseInt(document.getElementById('cols').value);
+            const gap = parseInt(document.getElementById('gap').value);
+            const elastic = parseInt(document.getElementById('elastic').value) / 100;
+            const impact = parseInt(document.getElementById('impact').value);
+            const hue = document.getElementById('hue').value;
+            const mode = document.getElementById('color-mode').value;
+            const radius = document.getElementById('radius').value;
+            const duration = 10000;
+
+            inputs.forEach(id => { if(document.getElementById('v-'+id)) document.getElementById('v-'+id).innerText = document.getElementById(id).value });
+
+            canvas.style.width = canvasW + "px";
+            canvas.style.height = canvasH + "px";
+            timelineWrap.style.width = canvasW + "px";
+
+            const overshoot = 1.0 + (elastic * 0.8);
+            const undershoot = -0.4 * elastic;
+            document.documentElement.style.setProperty('--rubber-curve', `cubic-bezier(0.5, ${undershoot}, 0.2, ${overshoot})`);
+
+            const elapsed = (Date.now() - startTime) % duration;
+            const progress = elapsed / duration;
+            timelineBar.style.width = (progress * 100) + "%";
+
+            syncStacks(qty, cols);
+
+            const colW = (canvasW - (gap * (cols + 1))) / cols;
+
+            columnStacks.forEach((stack, colIdx) => {
+                stack.forEach(box => {
+                    if (box.slot < impact && progress > box.trigger && progress < 0.92) box.weight = box.evolveW;
+                    else box.weight = box.baseW;
+                });
+
+                const totalWeight = stack.reduce((acc, b) => acc + b.weight, 0);
+                const totalHAvailable = canvasH - (gap * (stack.length + 1));
+                const posX = gap + (colIdx * (colW + gap));
+                let curY = gap;
+
+                stack.forEach((box, i) => {
+                    const h = (box.weight / totalWeight) * totalHAvailable;
+                    const el = box.el;
+                    const finalH = (i === stack.length - 1 ? canvasH - curY - gap : h);
+
+                    if (el.style.opacity === "0" || el.style.opacity === "") {
+                        el.style.transition = 'none';
+                        el.style.left = posX + "px";
+                        el.style.width = colW + "px";
+                        el.style.top = (box.spawnSide === 'top' ? -500 : canvasH + 500) + "px";
+                        el.offsetHeight; 
+                        el.style.transition = '';
+                        el.style.opacity = "1";
+                    }
+
+                    el.style.left = posX + "px";
+                    el.style.top = curY + "px";
+                    el.style.width = colW + "px";
+                    el.style.height = finalH + "px";
+                    el.style.borderRadius = radius + "px";
+                    
+                    let bHue = parseInt(hue);
+                    if (mode === 'triad') bHue += (i % 3 === 0 ? 0 : (i % 3 === 1 ? 120 : 240));
+                    if (mode === 'comp') bHue += (i % 2 === 0 ? 0 : 180);
+                    if (mode === 'analog') bHue += (i * 15);
+                    el.style.backgroundColor = `hsl(${bHue % 360}, 50%, ${25 + (i % 5) * 8}%)`;
+
+                    curY += h + gap;
+                });
+            });
+
+            boxesPool.filter(b => !b.active).forEach(box => {
+                if (box.el.style.opacity === "1") {
+                    const exitY = box.exitSide === 'top' ? -600 : canvasH + 600;
+                    box.el.style.top = exitY + "px";
+                    box.el.style.opacity = "0";
+                    setTimeout(() => { if(!box.active) box.el.style.top = "-2000px"; }, 1000);
+                }
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        function exportSVG() {
+            const canvasW = canvas.offsetWidth;
+            const canvasH = canvas.offsetHeight;
+            const radiusBase = parseInt(document.getElementById('radius').value);
+            
+            let svg = `<svg width="${canvasW}" height="${canvasH}" viewBox="0 0 ${canvasW} ${canvasH}" xmlns="http://www.w3.org/2000/svg" style="background:#000">`;
+            
+            boxesPool.forEach(b => {
+                if(b.active) {
+                    const l = parseFloat(b.el.style.left);
+                    const t = parseFloat(b.el.style.top);
+                    const w = parseFloat(b.el.style.width);
+                    const h = parseFloat(b.el.style.height);
+                    
+                    const safeRadius = Math.min(radiusBase, w / 2, h / 2);
+                    
+                    svg += `<rect x="${l}" y="${t}" width="${w}" height="${h}" rx="${safeRadius}" fill="${b.el.style.backgroundColor}" />`;
+                }
+            });
+            
+            svg += `</svg>`;
+            
+            const blob = new Blob([svg], {type: 'image/svg+xml'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'eWOW-grid-export.svg';
+            a.click();
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
